@@ -1,0 +1,7 @@
+# editor / OS cruft
+*.swp
+*~
+.DS_Store
+
+# stray build leftovers (build.sh cleans these, but just in case)
+.cache/

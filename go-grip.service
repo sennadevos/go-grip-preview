@@ -1,0 +1,16 @@
+[Unit]
+Description=go-grip Markdown preview server (serves %h)
+Documentation=https://github.com/chrishrb/go-grip
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# %h = the user's home directory. -b=false stops go-grip from launching a
+# browser on every start; the server stays up and you open it on demand.
+ExecStart=%h/.local/bin/go-grip -b=false -p 6419 %h
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
