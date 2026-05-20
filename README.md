@@ -5,14 +5,18 @@ Markdown preview server always running for your user, serving your whole home
 directory. Built for an **atomic / immutable** host: nothing is installed on the
 base system — the binary is compiled in a toolbox and copied into `~/.local/bin`.
 
+Everything is **copied into place** on install (no symlinks back into this repo),
+so the clone is disposable: clone → `./build.sh && ./install.sh` → delete the
+clone, and it all keeps working from standard locations.
+
 ## Layout
 
 | File                | Responsibility                                              |
 |---------------------|-------------------------------------------------------------|
 | `build.sh`          | Compile go-grip in a toolbox, copy the static binary to `~/.local/bin`. |
-| `go-grip.service`   | The systemd **user** unit (source of truth lives here).     |
-| `install.sh`        | Symlink the unit into `~/.config/systemd/user` and enable it. |
-| `uninstall.sh`      | Disable and remove the unit (keeps the binary).             |
+| `go-grip.service`   | The systemd **user** unit.                                  |
+| `install.sh`        | Copy the unit, `preview-md`, and the nvim module into place, then enable + start. |
+| `uninstall.sh`      | Disable and remove the unit + copied helpers (keeps the binary). |
 | `open-md.sh`        | Open a single Markdown file in Floorp via the running service. |
 | `nvim/markdown-preview.lua` | Neovim command + keymap that previews the current file. |
 
@@ -29,28 +33,23 @@ edit the service without rebuilding.
 Then open <http://localhost:6419> — you'll get a file tree of every Markdown
 file under your home directory, rendered GitHub-style.
 
-To jump straight to one file in your browser (Floorp):
+`install.sh` also copies `open-md.sh` to `~/.local/bin/preview-md`, so to jump
+straight to one file in your browser (Floorp):
 
 ```bash
-./open-md.sh ~/Documenten/notes.md
+preview-md ~/Documenten/notes.md
 ```
 
-This relies on the running service and just opens the right URL. For a global
-shortcut, symlink it onto your PATH:
-
-```bash
-ln -sf "$PWD/open-md.sh" ~/.local/bin/preview-md
-preview-md ~/some/file.md
-```
+This relies on the running service and just opens the right URL.
 
 ## Neovim integration
 
-`install.sh` symlinks `nvim/markdown-preview.lua` into
+`install.sh` copies `nvim/markdown-preview.lua` into
 `~/.config/nvim/lua/config/` and puts `preview-md` on your `$PATH`. Add this line
-to your `init.lua` (done once; it lives in your dotfiles, not here):
+to your `init.lua` (once; it lives in your dotfiles):
 
 ```lua
-pcall(require, 'config.markdown-preview')  -- from go-grip-preview repo (symlinked)
+pcall(require, 'config.markdown-preview')
 ```
 
 Then, with any file open:
@@ -59,11 +58,8 @@ Then, with any file open:
 - `<leader>pm` — same, via keymap
 
 The Lua module just shells out to `preview-md`, so all the URL logic lives in one
-place (`open-md.sh`).
-
-> Note: this intentionally fragments a slice of your Neovim config into this
-> repo. The `require` line stays in your dotfiles (the source of truth); the
-> implementation is symlinked in from here.
+place (`open-md.sh`). Re-run `./install.sh` after pulling to update the copied
+module.
 
 ## How it works
 
@@ -106,5 +102,6 @@ systemctl --user edit go-grip
   ```bash
   loginctl enable-linger "$USER"
   ```
-- The unit is symlinked (not copied), so editing `go-grip.service` here and
-  running `systemctl --user daemon-reload` is enough to pick up changes.
+- Files are copied into place, so this clone is disposable. After editing
+  anything here, re-run `./install.sh` to push the changes into your standard
+  locations.
